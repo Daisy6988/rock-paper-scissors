@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>水族館猜拳大賽</title>
+    <style>
+        :root {
+            --sea-blue: #0077be;
+            --deep-blue: #001f3f;
+            --sand: #f4d03f;
+            --gold: #ffd700;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Microsoft JhengHei", sans-serif;
+            background: linear-gradient(to bottom, var(--sea-blue), var(--deep-blue));
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        /* 標題與紀錄區 */
+        .header {
+            text-align: center;
+            padding: 20px;
+        }
+
+        h1 { font-size: 3.5rem; text-shadow: 2px 2px 10px rgba(0,0,0,0.5); margin: 10px 0; }
+
+        /* 水族箱展示區 */
+        .aquarium {
+            width: 90%;
+            max-width: 800px;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 8px solid #fff;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+            position: relative;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
+        }
+
+        .fish-slot {
+            font-size: 3.5rem;
+            filter: grayscale(100%) opacity(0.2);
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .fish-slot.active {
+            filter: grayscale(0%) opacity(1);
+            transform: scale(1.2);
+        }
+
+        /* 遊戲主區塊 */
+        .game-main {
+            background: white;
+            color: #333;
+            width: 90%;
+            max-width: 600px;
+            padding: 30px;
+            border-radius: 30px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .btn-group {
+            display: flex;
+            justify-content: space-around;
+            gap: 15px;
+            margin: 25px 0;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 20px 10px;
+            font-size: 1.8rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: 4px solid var(--sea-blue);
+            background: white;
+            border-radius: 20px;
+            transition: 0.2s;
+        }
+
+        .action-btn:hover { background: #e1f5fe; transform: translateY(-5px); }
+        .action-btn span { display: block; font-size: 3.5rem; margin-bottom: 5px; }
+
+        /* 結果文字 */
+        #result-text {
+            min-height: 100px;
+            font-size: 1.8rem;
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        /* 冠軍畫面 */
+        #champion-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 31, 63, 0.95);
+            z-index: 1000;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .champ-card {
+            background: white;
+            padding: 50px;
+            border-radius: 40px;
+            color: #333;
+            border: 10px solid var(--gold);
+        }
+
+        .restart-btn {
+            margin-top: 30px;
+            padding: 20px 60px;
+            font-size: 2rem;
+            background: var(--sea-blue);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+        }
+
+        /* 氣泡裝飾 */
+        .bubble {
+            position: absolute;
+            background: rgba(255,255,255,0.3);
+            border-radius: 50%;
+            bottom: -50px;
+            animation: rise 10s infinite ease-in;
+        }
+
+        @keyframes rise {
+            0% { transform: translateY(0); opacity: 0; }
+            50% { opacity: 0.5; }
+            100% { transform: translateY(-100vh); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>海洋猜拳收集王</h1>
+        <p style="font-size: 1.5rem;">贏一次就能得到一條魚，集滿 10 條就是冠軍！</p>
+    </div>
+
+    <div class="aquarium" id="aquarium">
+        <span class="fish-slot">🐠</span>
+        <span class="fish-slot">🐟</span>
+        <span class="fish-slot">🐡</span>
+        <span class="fish-slot">🦈</span>
+        <span class="fish-slot">🐙</span>
+        <span class="fish-slot">🦐</span>
+        <span class="fish-slot">🦀</span>
+        <span class="fish-slot">🐬</span>
+        <span class="fish-slot">🐳</span>
+        <span class="fish-slot">🦑</span>
+    </div>
+
+    <div class="game-main">
+        <div id="result-text">請按下方按鈕開始！</div>
+
+        <div class="btn-group">
+            <button class="action-btn" data-choice="石頭">
+                <span>✊</span>石頭
+            </button>
+            <button class="action-btn" data-choice="剪刀">
+                <span>✂️</span>剪刀
+            </button>
+            <button class="action-btn" data-choice="布">
+                <span>✋</span>布
+            </button>
+        </div>
+        
+        <div style="font-size: 1.2rem; color: #666;">
+            目前已收集：<span id="fish-count" style="font-weight:bold; color:red;">0</span> / 10 條魚
+        </div>
+    </div>
+
+    <div id="champion-overlay">
+        <div class="champ-card">
+            <h2 style="font-size: 5rem; margin: 0;">🏆</h2>
+            <h2 style="font-size: 3rem;">恭喜！你是冠軍！</h2>
+            <p style="font-size: 1.5rem;">你成功讓水族箱充滿了生機！</p>
+            <button class="restart-btn" onclick="resetGame()">再玩一次</button>
+        </div>
+    </div>
+
+    <script>
+        let fishCount = 0;
+        const fishSlots = document.querySelectorAll('.fish-slot');
+
+        // 語音功能：讓長輩聽得到結果
+        function speak(text) {
+            const synth = window.speechSynthesis;
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.lang = 'zh-TW';
+            synth.speak(utter);
+        }
+
+        // --- 1. 電腦出拳 ---
+        function getComputerChoice() {
+            const choices = ['石頭', '剪刀', '布'];
+            return choices[Math.floor(Math.random() * 3)];
+        }
+
+        // --- 2. 判斷輸贏 ---
+        function judge(player, computer) {
+            if (player === computer) return 'tie';
+            if (
+                (player === '石頭' && computer === '剪刀') ||
+                (player === '剪刀' && computer === '布') ||
+                (player === '布' && computer === '石頭')
+            ) {
+                return 'win';
+            }
+            return 'lose';
+        }
+
+        // --- 3. 執行一局 ---
+        function playGame(playerChoice) {
+            const computerChoice = getComputerChoice();
+            const result = judge(playerChoice, computerChoice);
+            
+            const resultDisplay = document.querySelector('#result-text');
+            const countDisplay = document.querySelector('#fish-count');
+            
+            let emojiMap = { '石頭': '✊', '剪刀': '✂️', '布': '✋' };
+            let resultHTML = `<div>你出 ${emojiMap[playerChoice]}，電腦出 ${emojiMap[computerChoice]}</div>`;
+
+            if (result === 'win') {
+                fishCount++;
+                resultHTML += `<div style="color:#28a745; font-weight:bold; font-size:2.5rem;">你贏了！獲得一條魚！</div>`;
+                updateAquarium();
+                speak("恭喜，你贏了，得到一條魚");
+            } else if (result === 'lose') {
+                // 輸了可以不扣掉魚，或是扣掉一條增加挑戰性，這裡採取「不扣魚」鼓勵長輩繼續玩
+                resultHTML += `<div style="color:#dc3545; font-weight:bold;">輸掉了...再接再厲！</div>`;
+                speak("哎呀，輸掉了");
+            } else {
+                resultHTML += `<div style="color:#0077be; font-weight:bold;">平手！再來一局！</div>`;
+                speak("平手喔");
+            }
+
+            resultDisplay.innerHTML = resultHTML;
+            countDisplay.innerText = fishCount;
+
+            // 檢查是否收集滿 10 條
+            if (fishCount >= 10) {
+                setTimeout(() => {
+                    document.querySelector('#champion-overlay').style.display = 'flex';
+                    speak("恭喜你是冠軍，你收集到十條魚了");
+                }, 800);
+            }
+        }
+
+        // 更新水族箱視覺
+        function updateAquarium() {
+            if (fishCount <= 10) {
+                fishSlots[fishCount - 1].classList.add('active');
+            }
+        }
+
+        // 重置遊戲
+        function resetGame() {
+            fishCount = 0;
+            document.querySelector('#fish-count').innerText = "0";
+            document.querySelector('#result-text').innerText = "請按下方按鈕開始！";
+            document.querySelector('#champion-overlay').style.display = 'none';
+            fishSlots.forEach(slot => slot.classList.remove('active'));
+        }
+
+        // 綁定按鈕點擊事件
+        document.querySelectorAll('.action-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const choice = this.getAttribute('data-choice');
+                playGame(choice);
+            });
+        });
+
+        // 產生氣泡效果
+        function createBubble() {
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            const size = Math.random() * 40 + 10 + 'px';
+            bubble.style.width = size;
+            bubble.style.height = size;
+            bubble.style.left = Math.random() * 100 + 'vw';
+            bubble.style.animationDuration = Math.random() * 5 + 5 + 's';
+            document.body.appendChild(bubble);
+            setTimeout(() => bubble.remove(), 10000);
+        }
+        setInterval(createBubble, 1000);
+    </script>
+</body>
+</html>
